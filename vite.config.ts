@@ -1,17 +1,21 @@
 import { defineConfig, type HtmlTagDescriptor, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import fs from 'node:fs'
 import path from 'node:path'
 
-import siteConfiguration from './.figma/make/site.json'
+const siteConfiguration = loadSiteConfiguration()
 
 // Vite config — https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   // .figma/make/deploy-preview passes `--mode development` for cached-preview builds.
   const emitSourcemaps = mode === 'development'
+  const base = process.env.FIGMA_PUBLIC_URL
+    ? `${process.env.FIGMA_PUBLIC_URL}/`
+    : process.env.VITE_BASE_PATH || '/'
 
   return {
-    base: process.env.FIGMA_PUBLIC_URL ? `${process.env.FIGMA_PUBLIC_URL}/` : '/',
+    base,
     build: {
       sourcemap: emitSourcemaps ? 'inline' : false,
       minify: !emitSourcemaps,
@@ -27,6 +31,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
+        'prop-types': path.resolve(__dirname, './src/shims/prop-types.ts'),
       },
     },
     server: {
@@ -41,6 +46,15 @@ export default defineConfig(({ mode }) => {
     },
   }
 })
+
+function loadSiteConfiguration(): FigmaSiteConfiguration {
+  const siteConfigPath = path.resolve(__dirname, '.figma/make/site.json')
+  if (!fs.existsSync(siteConfigPath)) {
+    return {}
+  }
+
+  return JSON.parse(fs.readFileSync(siteConfigPath, 'utf8')) as FigmaSiteConfiguration
+}
 
 type FigmaSiteConfiguration = {
   title?: string
